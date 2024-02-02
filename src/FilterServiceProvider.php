@@ -22,6 +22,11 @@ class FilterServiceProvider extends ServiceProvider
             Nova::style('daterangepicker', __DIR__.'/../dist/css/daterangepicker.css');
             Nova::script('daterangepicker_', __DIR__.'/../dist/js/filter.js');
             Nova::style('daterangepicker_', __DIR__.'/../dist/css/filter.css');
+
+            $localeFile = __DIR__.'/../resources/lang/' . app()->getLocale() . '.json';
+            if (file_exists($localeFile)) {
+                Nova::translations($localeFile);
+            }
         });
     }
 
