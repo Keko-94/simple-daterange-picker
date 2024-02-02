@@ -12,11 +12,17 @@ class Daterangepicker extends Filter
     private array $periods = [];
     private bool|string $minDate = false;
     private bool|string $maxDate = false;
+    private string $isoFormat = 'DD/MM/YYYY';
 
     public function __construct(
         private string $column,
         private string $default = Helper::TODAY,
+        private ?array $defaultDates = null
     ) {
+        if ($this->default === Helper::CUSTOM) {
+            if (count($this->defaultDates) !== 2 || !$this->defaultDates[0] || !$this->defaultDates[1])
+                $this->default = Helper::TODAY;
+        }
     }
 
     public $component = 'daterangepicker';
@@ -24,7 +30,7 @@ class Daterangepicker extends Filter
 
     public function apply(NovaRequest $request, $query, $value)
     {
-        [$start, $end] = Helper::getParsedDatesGroupedRanges($value);
+        [$start, $end] = Helper::getParsedDatesGroupedRanges($value, $this->isoFormat);
 
         if ($start && $end) {
             $query->whereBetween($this->column, [$start, $end]);
@@ -56,6 +62,7 @@ class Daterangepicker extends Filter
             'customRanges' => json_encode($this->periods),
             'maxDate' => $this->maxDate ?? false,
             'minDate' => $this->minDate ?? false,
+            'format' => $this->isoFormat
         ];
     }
 
@@ -91,14 +98,28 @@ class Daterangepicker extends Filter
 
     public function default(): string
     {
-        [$start, $end] = Helper::getParsedDatesGroupedRanges($this->default);
+        if ($this->default === Helper::CUSTOM) {
+            [$start, $end] = $this->defaultDates;
+        } else {
+            [$start, $end] = Helper::getParsedDatesGroupedRanges($this->default, $this->isoFormat);
+        }
 
-        return $start->format('d-m-Y').' to '.$end->format('d-m-Y');
+        return $start->isoFormat($this->isoFormat).' '.__('to').' '.$end->isoFormat($this->isoFormat);
     }
 
     public function setName(string $name): self
     {
         $this->name = $name;
+
+        return $this;
+    }
+
+    /*
+     * Date format used by moment JS
+     * DD-MM-YYYY
+     */
+    public function setIsoFormat(string $isoFormat): self {
+        $this->isoFormat = $isoFormat;
 
         return $this;
     }
