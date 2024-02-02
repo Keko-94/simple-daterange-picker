@@ -5,7 +5,7 @@
       <input type="text" class="hidden">
       <input
           :id="id"
-          class="w-full form-control form-control-sm form-input form-input-bordered bg-gray-100 text-sm px-1"
+          class="w-full form-control form-control-sm form-input form-input-bordered bg-gray-100 text-sm px-3"
           type="text"
           :dusk="`${filter.name}-daterange-filter`"
           name="daterangefilter"
@@ -23,6 +23,7 @@
 import debounce from 'lodash/debounce'
 
 export default {
+
   emits: ['change'],
 
   props: {
@@ -48,6 +49,12 @@ export default {
     currentRanges: null,
     maxDate: null,
     minDate: null,
+    defaultStartDate: null,
+    defaultEndDate: null,
+    format: null,
+    trans: function (key) {
+        return Nova.config('translations')[key];
+    }
   }),
 
   created() {
@@ -55,7 +62,6 @@ export default {
 
     this.setCurrentFilterValue()
     this.setOptions()
-
     this.parseDates()
   },
 
@@ -100,14 +106,20 @@ export default {
       this.minDate = this.filter.options.find(opt => opt.label === 'minDate').value ?
           moment(this.filter.options.find(opt => opt.label === 'minDate').value) :
           false;
+
+      this.format = this.filter.options.find(opt => opt.label === 'format').value
     },
     setCurrentFilterValue() {
       this.value = this.filter.currentValue
     },
     handleChange() {
+      if (this.currentStartDate === null)
+        this.currentStartDate = this.defaultStartDate
+      if (this.currentEndDate === null)
+        this.currentEndDate = this.defaultEndDate
       this.$store.commit(`${this.resourceName}/updateFilterState`, {
         filterClass: this.filterKey,
-        value: this.currentStartDate.format('DD-MM-YYYY') + ' to ' + this.currentEndDate.format('DD-MM-YYYY'),
+        value: this.currentStartDate.format(this.format) + ' ' + this.trans('to') + ' ' + this.currentEndDate.format(this.format),
       })
 
       this.$emit('change')
@@ -129,17 +141,46 @@ export default {
         minDate: ref.minDate,
         ranges: ref.customRanges,
         locale: {
-          format: 'DD-MM-YYYY'
-        }
+            'format': this.format,
+            'customRangeLabel': this.trans('Custom dates'),
+            'fromLabel': this.trans('from'),
+            'toLabel': this.trans('to'),
+            'applyLabel': this.trans('Apply'),
+            'cancelLabel': this.trans('Cancel'),
+            'daysOfWeek': [
+                this.trans('Su'),
+                this.trans('Mo'),
+                this.trans('Tu'),
+                this.trans('We'),
+                this.trans('Th'),
+                this.trans('Fr'),
+                this.trans('Sa')
+            ],
+            'monthNames': [
+                this.trans('January'),
+                this.trans('February'),
+                this.trans('March'),
+                this.trans('April'),
+                this.trans('May'),
+                this.trans('June'),
+                this.trans('July'),
+                this.trans('August'),
+                this.trans('September'),
+                this.trans('October'),
+                this.trans('November'),
+                this.trans('December')
+            ],
+            'firstDay': 1
+          },
       }, function (start, end, label) {
         if (start && end) {
           ref.currentStartDate = start
           ref.currentEndDate = end
         }
       })
-          .on('apply.daterangepicker', function (ev, picker) {
+          .on('apply.daterangepicker', (ev, picker) => {
             if (ref.currentStartDate && ref.currentEndDate) {
-              ref.value = ref.currentStartDate.format('DD-MM-YYYY') + ' to ' + ref.currentEndDate.format('DD-MM-YYYY')
+              ref.value = ref.currentStartDate.format(this.format) + ' ' + this.trans('to') + ' ' + ref.currentEndDate.format(this.format)
             }
           })
     },
@@ -152,18 +193,20 @@ export default {
       let startDate = moment()
       let endDate = moment()
 
-      if (dateRange) {
-        const parsedDateRange = dateRange.split(' to ')
+      if (dateRange){
+        const parsedDateRange = dateRange.split(` ${this.trans('to')} `)
         if (parsedDateRange.length == 2) {
           try {
             startDate = moment(parsedDateRange[0], "DD-MM-YYYY")
             endDate = moment(parsedDateRange[1], "DD-MM-YYYY")
+            this.defaultStartDate = startDate;
+            this.defaultEndDate = endDate;
           } catch (e) {
           }
         }
       }
-      this.startDate = startDate.format('DD-MM-YYYY')
-      this.endDate = endDate.format('DD-MM-YYYY')
+      this.startDate = startDate.format(this.format)
+      this.endDate = endDate.format(this.format)
 
       this.currentStartDate = startDate
       this.currentEndDate = endDate
