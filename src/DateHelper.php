@@ -28,7 +28,11 @@ class DateHelper
 
     const THIS_YEAR = 'THIS_YEAR';
 
-    public static function getParsedDatesGroupedRanges($value): array
+    const THREE_MONTHS_AROUND = 'THREE_MONTHS_AROUND';
+
+    const CUSTOM = 'CUSTOM';
+
+    public static function getParsedDatesGroupedRanges($value, $isoFormat): array
     {
         $start = Carbon::now()->setTime(0, 0, 0);
         $end = $start->clone()->setTime(23, 59, 59);
@@ -58,6 +62,7 @@ class DateHelper
                 break;
             case 'THIS_MONTH':
                 $start->startOfMonth();
+                $end = $start->clone()->endOfMonth();
                 break;
             case 'LAST_MONTH':
                 $start->startOfMonth()->subMonth();
@@ -68,17 +73,21 @@ class DateHelper
                 break;
             case 'THIS_YEAR':
                 $start->startOfYear();
+                $end = $start->clone()->endOfYear();
+                break;
+            case 'THREE_MONTHS_AROUND':
+                $start->subMonths(3);
+                $end = $start->clone()->addMonths(6);
                 break;
             default:
-                $parsed = explode(' to ', $value);
+                $parsed = explode(' '.__('to').' ', $value);
                 if (count($parsed) == 1) {
-                    $start = Carbon::make($value)->setTime(0, 0, 0);
+                    $start = Carbon::createFromIsoFormat($isoFormat, $value)->setTime(0, 0, 0);
                     $end = $start->clone()->setTime(23, 59, 59);
                 } elseif (count($parsed) == 2) {
-                    $start = Carbon::make($parsed[0])->setTime(0, 0, 0);
-                    $end = Carbon::make($parsed[1])->setTime(23, 59, 59);
+                    $start = Carbon::createFromIsoFormat($isoFormat, $parsed[0])->setTime(0, 0, 0);
+                    $end = Carbon::createFromIsoFormat($isoFormat, $parsed[1])->setTime(23, 59, 59);
                 }
-
         }
 
         return [
