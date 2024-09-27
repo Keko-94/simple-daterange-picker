@@ -2,7 +2,10 @@
 
 namespace Rpj\Daterangepicker;
 
+use App\Models\User;
+use App\Nova\Session\SessionAttendanceResource;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Laravel\Nova\Filters\Filter;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Rpj\Daterangepicker\DateHelper as Helper;
@@ -13,6 +16,7 @@ class Daterangepicker extends Filter
     private bool|string $minDate = false;
     private bool|string $maxDate = false;
     private string $isoFormat = 'DD/MM/YYYY';
+    private $customApplyCb = null;
 
     public function __construct(
         private string $column,
@@ -33,8 +37,18 @@ class Daterangepicker extends Filter
         [$start, $end] = Helper::getParsedDatesGroupedRanges($value, $this->isoFormat);
 
         if ($start && $end) {
-            $query->whereBetween($this->column, [$start, $end]);
+            if ($this->customApplyCb) {
+                call_user_func($this->customApplyCb, $query, $start, $end);
+            } else {
+                $query->whereBetween($this->column, [$start, $end]);
+            }
         }
+    }
+
+    public function customApply(callable $cb): self {
+        $this->customApplyCb = $cb;
+
+        return $this;
     }
 
     public function options(NovaRequest $request)
