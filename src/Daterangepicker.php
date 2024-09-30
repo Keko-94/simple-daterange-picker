@@ -3,7 +3,6 @@
 namespace Rpj\Daterangepicker;
 
 use App\Models\User;
-use App\Nova\Session\SessionAttendanceResource;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Laravel\Nova\Filters\Filter;
@@ -23,10 +22,10 @@ class Daterangepicker extends Filter
         private string $default = Helper::TODAY,
         private ?array $defaultDates = null
     ) {
-        if ($this->default === Helper::CUSTOM) {
-            if (count($this->defaultDates) !== 2 || !$this->defaultDates[0] || !$this->defaultDates[1])
-                $this->default = Helper::TODAY;
-        }
+//        if ($this->default === Helper::CUSTOM) {
+//            if (count($this->defaultDates) !== 2 || !$this->defaultDates[0] || !$this->defaultDates[1])
+//                $this->default = Helper::TODAY;
+//        }
     }
 
     public $component = 'daterangepicker';
@@ -110,15 +109,20 @@ class Daterangepicker extends Filter
         return $this;
     }
 
-    public function default(): string
+    /**
+     * Set the default options for the filter.
+     *
+     * @return array|mixed
+     */
+    public function default(): string|null
     {
-        if ($this->default === Helper::CUSTOM) {
-            [$start, $end] = $this->defaultDates;
-        } else {
-            [$start, $end] = Helper::getParsedDatesGroupedRanges($this->default, $this->isoFormat);
+        [$start, $end] = Helper::getParsedDatesGroupedRanges($this->default, $this->isoFormat);
+
+        if ($start && $end) {
+            return $start->isoFormat($this->isoFormat).' '.__('to').' '.$end->isoFormat($this->isoFormat);
         }
 
-        return $start->isoFormat($this->isoFormat).' '.__('to').' '.$end->isoFormat($this->isoFormat);
+        return null;
     }
 
     public function setName(string $name): self
