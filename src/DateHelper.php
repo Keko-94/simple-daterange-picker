@@ -6,6 +6,8 @@ use Illuminate\Support\Carbon;
 
 class DateHelper
 {
+    const ALL = 'All';
+
     const TODAY = 'TODAY';
 
     const YESTERDAY = 'YESTERDAY';
@@ -30,10 +32,11 @@ class DateHelper
 
     const THREE_MONTHS_AROUND = 'THREE_MONTHS_AROUND';
 
-    const CUSTOM = 'CUSTOM';
-
     public static function getParsedDatesGroupedRanges($value, $isoFormat): array
     {
+        if ($value == self::ALL)
+            return [null, null];
+
         $start = Carbon::now()->setTime(0, 0, 0);
         $end = $start->clone()->setTime(23, 59, 59);
 
