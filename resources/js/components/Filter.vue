@@ -2,19 +2,33 @@
   <FilterContainer>
     <span>{{ filter.name }}</span>
     <template #filter>
-      <input type="text" class="hidden">
-      <input
-          :id="id"
-          class="w-full form-control form-control-sm form-input form-input-bordered bg-gray-100 text-sm px-3"
-          type="text"
-          :dusk="`${filter.name}-daterange-filter`"
-          name="daterangefilter"
-          autocomplete="off"
-          :value="value"
-          :placeholder="placeholder"
-          @keydown="handleInput($event)"
-          @paste.prevent
-      />
+      <div class="relative">
+        <input type="text" class="hidden">
+        <input
+            :id="id"
+            class="w-full form-control form-control-sm form-input form-input-bordered bg-gray-100 text-sm px-3"
+            :class="{ 'text-transparent': (value == null) }"
+            type="text"
+            :dusk="`${filter.name}-daterange-filter`"
+            name="daterangefilter"
+            autocomplete="off"
+            :value="value"
+            :placeholder="placeholder"
+            @keydown="handleInput($event)"
+            @paste.prevent
+        />
+        <div
+          v-if="value"
+          class="absolute top-0 right-0 mt-1 mr-1">
+          <button class="bg-transparent"
+                  @click="clearFilter"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
     </template>
   </FilterContainer>
 </template>
@@ -49,8 +63,7 @@ export default {
     currentRanges: null,
     maxDate: null,
     minDate: null,
-    defaultStartDate: null,
-    defaultEndDate: null,
+
     format: null,
     trans: function (key) {
         return Nova.config('translations')[key];
@@ -59,7 +72,6 @@ export default {
 
   created() {
     this.debouncedHandleChange = debounce(() => this.handleChange(), 500)
-
     this.setCurrentFilterValue()
     this.setOptions()
     this.parseDates()
@@ -68,7 +80,7 @@ export default {
   mounted() {
     this.id = 'dateRangeCalendar_' + this.generateId()
 
-    Nova.$on('filter-reset', this.setCurrentFilterValue)
+    Nova.$on('filter-reset', this.unsetCurrentFilterValue)
 
     setTimeout(() => {
       this.initDateRange()
@@ -76,7 +88,7 @@ export default {
   },
 
   beforeUnmount() {
-    Nova.$off('filter-reset', this.setCurrentFilterValue)
+    Nova.$off('filter-reset', this.unsetCurrentFilterValue)
   },
 
   watch: {
@@ -110,22 +122,20 @@ export default {
       this.format = this.filter.options.find(opt => opt.label === 'format').value
     },
     setCurrentFilterValue() {
-      this.value = this.filter.currentValue
+      this.value = this.filter.currentValue === '' ? null : this.filter.currentValue;
+    },
+    unsetCurrentFilterValue() {
+      this.value = null
     },
     handleChange() {
-      if (this.currentStartDate === null)
-        this.currentStartDate = this.defaultStartDate
-      if (this.currentEndDate === null)
-        this.currentEndDate = this.defaultEndDate
-      this.$store.commit(`${this.resourceName}/updateFilterState`, {
-        filterClass: this.filterKey,
-        value: this.currentStartDate.format(this.format) + ' ' + this.trans('to') + ' ' + this.currentEndDate.format(this.format),
-      })
+      if (this.value) {
+        this.$store.commit(`${this.resourceName}/updateFilterState`, {
+          filterClass: this.filterKey,
+          value: (this.currentStartDate && this.currentEndDate) ? (this.currentStartDate.format(this.format) + ' ' + this.trans('to') + ' ' + this.currentEndDate.format(this.format)) : '',
+        })
 
-      this.$emit('change')
-
-      this.currentStartDate = null
-      this.currentEndDate = null
+        this.$emit('change')
+      }
     },
     handleInput(e) {
       return e.preventDefault();
@@ -135,6 +145,7 @@ export default {
       const ref = this
 
       $(idSelector).daterangepicker({
+        autoUpdateInput: false,
         startDate: ref.startDate,
         endDate: ref.endDate,
         maxDate: ref.maxDate,
@@ -178,11 +189,21 @@ export default {
           ref.currentEndDate = end
         }
       })
-          .on('apply.daterangepicker', (ev, picker) => {
-            if (ref.currentStartDate && ref.currentEndDate) {
-              ref.value = ref.currentStartDate.format(this.format) + ' ' + this.trans('to') + ' ' + ref.currentEndDate.format(this.format)
-            }
-          })
+        .on('apply.daterangepicker', (ev, picker) => {
+          if (ref.currentStartDate && ref.currentEndDate) {
+            ref.value = ref.currentStartDate.format(this.format) + ' ' + this.trans('to') + ' ' + ref.currentEndDate.format(this.format)
+          } else {
+            ref.value = null;
+          }
+        })
+    },
+    clearFilter: function() {
+      this.value = null
+      this.$store.commit(`${this.resourceName}/updateFilterState`, {
+        filterClass: this.filterKey,
+        value: '',
+      })
+      this.$emit('change')
     },
     generateId: function () {
       return Math.random().toString(36).substring(2) +
@@ -199,12 +220,11 @@ export default {
           try {
             startDate = moment(parsedDateRange[0], "DD-MM-YYYY")
             endDate = moment(parsedDateRange[1], "DD-MM-YYYY")
-            this.defaultStartDate = startDate;
-            this.defaultEndDate = endDate;
           } catch (e) {
           }
         }
       }
+
       this.startDate = startDate.format(this.format)
       this.endDate = endDate.format(this.format)
 
