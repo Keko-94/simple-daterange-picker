@@ -141,4 +141,9 @@ class Daterangepicker extends Filter
 
         return $this;
     }
+
+    public function key()
+    {
+        return 'daterangepicker_'.$this->column;
+    }
 }
